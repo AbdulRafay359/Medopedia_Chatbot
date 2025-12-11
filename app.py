@@ -1,21 +1,24 @@
-from src.helper import download_hugging_face_embeddings
-from flask import Flask, render_template, jsonify, request
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import ChatPromptTemplate
-from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
+from dotenv import load_dotenv
+from src.helper import download_hugging_face_embeddings
 from src.prompt import *
 import os
 
-app = Flask(__name__)
+app = FastAPI()
 
+templates = Jinja2Templates(directory="templates")  # put chat.html inside templates/
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 load_dotenv()
-
-os.environ["PINECONE_API_KEY"] = "pcsk_5b31iK_PEauo39XK6uigdNvXRiGLpzZKXY6DMgjyMyquXCWYVPognBmAGqCS27LNxsAz1t"
+os.environ["PINECONE_API_KEY"] = "ADD_YOUR_PINECONE_API_KEY"
 
 embeddings = download_hugging_face_embeddings()
-
 index_name = "medicalchatrobot"
 
 docsearch = PineconeVectorStore.from_existing_index(
@@ -28,6 +31,7 @@ retriever = docsearch.as_retriever(
     search_kwargs={"k": 3}
 )
 
+
 llm = OllamaLLM(model="llama3.1")
 
 prompt = ChatPromptTemplate.from_messages([
@@ -35,7 +39,8 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}")
 ])
 
-def rag_answer(query):
+
+def rag_answer(query: str):
     docs = retriever.invoke(query)
     context = "\n".join([doc.page_content for doc in docs])
 
@@ -45,22 +50,21 @@ def rag_answer(query):
     )
 
     response = llm.invoke(formatted_prompt)
-
     return response
 
 
-@app.route("/")
-def index():
-    return render_template('chat.html')
 
-@app.route("/get", methods=["GET", "POST"])
-def chat():
-    msg = request.form["msg"]
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request})
+
+@app.post("/get")
+async def chat(msg: str = Form(...)):
     print("User:", msg)
-
     response = rag_answer(msg)
-    
-    return str(response)
+    return {"response": response}
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080, debug=True)
+# -------------------------
+# Run server
+# -------------------------
+# Use: uvicorn main:app --reload --host 0.0.0.0 --port 8080
