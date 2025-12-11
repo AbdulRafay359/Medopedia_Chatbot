@@ -16,7 +16,6 @@ os.environ["PINECONE_API_KEY"] = "pcsk_5b31iK_PEauo39XK6uigdNvXRiGLpzZKXY6DMgjyM
 
 embeddings = download_hugging_face_embeddings()
 
-
 index_name = "medicalchatrobot"
 
 docsearch = PineconeVectorStore.from_existing_index(

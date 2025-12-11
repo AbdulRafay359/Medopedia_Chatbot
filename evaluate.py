@@ -1,10 +1,8 @@
 from langchain_ollama import OllamaLLM
 from app import rag_answer
 
-# Judge LLM (local)
 judge_llm = OllamaLLM(model="llama3.1")  # same as your RAG model
 
-# Example simple evaluator
 def evaluate_answer(input_text, output_text, reference_text):
     prompt = f"""
 You are an evaluator. Check if the following answer is correct.
